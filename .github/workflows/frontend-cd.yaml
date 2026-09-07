@@ -81,3 +81,4 @@ jobs:
           kustomize edit set image frontend=${{ steps.login-ecr.outputs.registry }}/frontend:${{ github.sha }}
           kustomize build | kubectl apply -f -
 
+
