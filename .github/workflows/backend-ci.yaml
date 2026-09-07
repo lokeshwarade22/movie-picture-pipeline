@@ -1,9 +1,8 @@
-name: Backend CI
+name: Backend Continuous Integration
 
 on:
   pull_request:
-    branches:
-      - main
+    branches: [main]
     paths:
       - 'starter/backend/**'
   workflow_dispatch:
@@ -14,23 +13,23 @@ jobs:
     defaults:
       run:
         working-directory: starter/backend
-
     steps:
-      - name: Checkout
+      - name: Checkout code
         uses: actions/checkout@v4
-
       - name: Setup Python
         uses: actions/setup-python@v5
         with:
           python-version: '3.10'
-
+      - name: Restore pip cache
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/pip
+          key: ${{ runner.os }}-pip-${{ hashFiles('starter/backend/Pipfile.lock') }}
       - name: Install pipenv
         run: pip install pipenv
-
       - name: Install dependencies
         run: pipenv install --dev
-
-      - name: Lint
+      - name: Run lint
         run: pipenv run lint
 
   test:
@@ -38,34 +37,30 @@ jobs:
     defaults:
       run:
         working-directory: starter/backend
-
     steps:
-      - name: Checkout
+      - name: Checkout code
         uses: actions/checkout@v4
-
       - name: Setup Python
         uses: actions/setup-python@v5
         with:
           python-version: '3.10'
-
+      - name: Restore pip cache
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/pip
+          key: ${{ runner.os }}-pip-${{ hashFiles('starter/backend/Pipfile.lock') }}
       - name: Install pipenv
         run: pip install pipenv
-
       - name: Install dependencies
         run: pipenv install --dev
-
-      - name: Test
+      - name: Run tests
         run: pipenv run test
 
   build:
-    needs:
-      - lint
-      - test
+    needs: [lint, test]
     runs-on: ubuntu-latest
-
     steps:
-      - name: Checkout
+      - name: Checkout code
         uses: actions/checkout@v4
-
-      - name: Build backend
-        run: docker build -t mp-backend:test starter/backend
+      - name: Build Docker image
+        run: docker build -t backend:${{ github.sha }} starter/backend
