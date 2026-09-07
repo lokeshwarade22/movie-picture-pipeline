@@ -5,8 +5,3 @@ node_modules
 *.tfstate.backup
 credentials
 .pytest_cache
-setup/terraform/terraform.tfstate
-setup/terraform/terraform.tfstate.*
-setup/terraform/.terraform/
-setup/terraform/terraform.tfstate
-setup/terraform/terraform.tfstate.*
