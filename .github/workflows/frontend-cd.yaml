@@ -5,10 +5,11 @@ on:
     branches: [main]
     paths:
       - 'starter/frontend/**'
+      - '.github/workflows/frontend-cd.yaml'
   workflow_dispatch:
 
 env:
-  AWS_REGION: us-east-1
+  AWS_REGION: ap-south-1
   ECR_REPOSITORY: frontend
 
 jobs:
@@ -21,11 +22,11 @@ jobs:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with:
-          node-version-file: starter/frontend/.nvmrc
+          node-version: 18
       - uses: actions/cache@v4
         with:
-          path: ~/.npm
-          key: ${{ runner.os }}-node-${{ hashFiles('starter/frontend/package-lock.json') }}
+          path: starter/frontend/node_modules
+          key: frontend-node-${{ hashFiles('starter/frontend/package-lock.json') }}
       - run: npm ci
       - run: npm run lint
 
@@ -38,54 +39,31 @@ jobs:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with:
-          node-version-file: starter/frontend/.nvmrc
+          node-version: 18
       - uses: actions/cache@v4
         with:
-          path: ~/.npm
-          key: ${{ runner.os }}-node-${{ hashFiles('starter/frontend/package-lock.json') }}
+          path: starter/frontend/node_modules
+          key: frontend-node-${{ hashFiles('starter/frontend/package-lock.json') }}
       - run: npm ci
-      - run: CI=true npm test -- --watchAll=false
+      - run: npm run test -- --watchAll=false
 
   build:
     needs: [lint, test]
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-
       - name: Configure AWS credentials
         uses: aws-actions/configure-aws-credentials@v4
         with:
           aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
           aws-region: ${{ env.AWS_REGION }}
-
       - name: Login to Amazon ECR
-        id: login-ecr        id: login-ecr
         id: login-ecr
-        id: login-ecr`n        uses: aws-actions/amazon-ecr-login@v2
-
+        uses: aws-actions/amazon-ecr-login@v2
       - name: Build and push Docker image
         env:
           ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
         run: |
-          docker build \
-            --build-arg REACT_APP_MOVIE_API_URL=${{ secrets.REACT_APP_MOVIE_API_URL }} \
-            -t $ECR_REGISTRY/$ECR_REPOSITORY:${{ github.sha }} \
-            starter/frontend
+          docker build --build-arg REACT_APP_MOVIE_API_URL=${{ secrets.REACT_APP_MOVIE_API_URL }} -t $ECR_REGISTRY/$ECR_REPOSITORY:${{ github.sha }} starter/frontend
           docker push $ECR_REGISTRY/$ECR_REPOSITORY:${{ github.sha }}
-
-      - name: Configure kubectl
-        run: aws eks update-kubeconfig --region $AWS_REGION --name cluster
-
-      - name: Deploy frontend
-        working-directory: starter/frontend/k8s
-        run: |
-          kustomize edit set image frontend=${{ steps.login-ecr.outputs.registry }}/frontend:${{ github.sha }}
-          kustomize build | kubectl apply -f -
-
-
-
-
-
-
-
